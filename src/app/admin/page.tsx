@@ -93,6 +93,18 @@ export default function AdminPage() {
           required
         />
 
+        {/* Поле Set — всегда видно, только для чтения */}
+        <input
+        type="text"
+        name="set_name"
+        placeholder="Set"
+        // value={formData.set_name}
+        // onChange={handleChange}
+        className="w-full p-3 border rounded-xl"
+        readOnly
+        />
+
+
         <input
           type="text"
           name="prices"
@@ -124,7 +136,7 @@ export default function AdminPage() {
           <option value="ru">Russian</option>
           <option value="fr">French</option>
           <option value="ja">Japanese</option>
-          <option value="de">DE</option>
+          <option value="de">German</option>
         </select>
 
         <label>
