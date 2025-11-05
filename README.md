@@ -1,36 +1,106 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+useEffect(() => {
+  if (!name.trim()) {
+    // ✅ Полностью сбрасываем состояние при очистке поля
+    setSets([]);
+    setSelectedCard(null);
+    setSetVariants([]);
+    setMessage("");
+    return;
+  }
 
-## Getting Started
+  const timer = setTimeout(async () => {
+    try {
+      // ✅ При новом поиске тоже очищаем старый выбор
+      setSelectedCard(null);
+      setSetVariants([]);
+      setMessage("🔍 Идёт поиск...");
 
-First, run the development server:
+      const all = await getPrintsByName(name.trim());
+      const uniqueSets = uniqueByKey(all, (i) => `${i.name}-${i.set}-${i.lang}`).map((card) => ({
+        scryfall_id: card.id,
+        name: card.name,
+        set_name: card.set_name,
+        collector_number: card.collector_number ?? "", // ✅ безопасное значение
+        lang: card.lang,
+      }));
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+      setSets(uniqueSets);
+      setMessage(`Найдена в ${uniqueSets.length} сетах`);
+    } catch {
+      setSets([]);
+      setSetVariants([]);
+      setSelectedCard(null);
+      setMessage("❌ Не удалось найти карты");
+    }
+  }, 400);
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+  return () => clearTimeout(timer);
+}, [name]);
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+<!--        ==================              -->
 
-## Learn More
+export function mapToCardData(card: ScryfallCard) {
+  const variant = detectVariant(card);
+  const finishes = card.finishes || [];
 
-To learn more about Next.js, take a look at the following resources:
+  const foilType = finishes.includes("surgefoil")
+    ? "surgefoil"
+    : finishes.includes("etched")
+    ? "etched"
+    : finishes.includes("rainbowfoil")
+    ? "rainbowfoil"
+    : finishes.includes("foil")
+    ? "foil"
+    : "nonfoil";
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+  const faces =
+    card.card_faces?.map((f, i) => ({
+      side: i === 0 ? "front" : "back",
+      imageUrl: f.image_uris?.large ?? f.image_uris?.normal ?? "",
+    })) ??
+    [
+      {
+        side: "front",
+        imageUrl: card.image_uris?.large ?? card.image_uris?.normal ?? "",
+      },
+    ];
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+  return {
+    scryfall_id: card.id,
+    name: card.name,
+    set: card.set,
+    set_name: card.set_name,
+    rarity: card.rarity ?? "",
+    artist: card.artist ?? "",
+    type_line: card.type_line ?? "",
+    colors: card.colors ?? [],
+    legalities: card.legalities ?? {},
+    faces,
+    variant,
+    foilType,
+    prices: "",
+    collector_number: card.collector_number ?? "", // ✅ добавлено
+    number: "", // ✅ пока пустое, заполнишь вручную в админке
+    lang: card.lang ?? "en",
+    isFoil: finishes.includes("foil"),
+  };
+}
 
-## Deploy on Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+<!-- старое -->
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+ const timer = setTimeout(async () => {
+      try {
+        const res = await axios.get(`https://api.scryfall.com/cards/named?exact=${encodeURIComponent(formData.name)}`);
+        const card = res.data;
+        const imageUrl = card.image_uris?.normal || card.card_faces?.[0]?.image_uris?.normal || "";
+        setPreview({ name: card.name, imageUrl });
+      } catch {
+        setPreview(null);
+      }
+    }, 500); // debounce 500ms
+
+    return () => clearTimeout(timer);
+  }, [formData.name]);
+
