@@ -114,7 +114,6 @@ export function mapToCardData(card: ScryfallCard) {
         ];
 
   return {
-<<<<<<< Updated upstream
     scryfall_id: card.id,
     name: card.name,
     set: card.set,
@@ -124,17 +123,6 @@ export function mapToCardData(card: ScryfallCard) {
     type_line: card.type_line ?? "",
     colors: card.colors ?? [],
     legalities: card.legalities ?? {},
-=======
-    scryfall_id: data.id,
-    name: data.name,
-    set: data.set,
-    set_name: data.set_name,
-    rarity: data.rarity ?? "",
-    artist: data.artist ?? "",
-    type_line: data.type_line ?? "",
-    colors: data.colors ?? [],
-    legalities: data.legalities ?? {},
->>>>>>> Stashed changes
     faces,
     variant,
     foilType: "nonfoil", // админ выберет вручную
