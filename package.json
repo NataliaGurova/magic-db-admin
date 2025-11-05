@@ -9,22 +9,37 @@
     "lint": "eslint"
   },
   "dependencies": {
+<<<<<<< Updated upstream
     "@radix-ui/react-label": "^2.1.8",
     "@radix-ui/react-scroll-area": "^1.2.10",
     "@radix-ui/react-select": "^2.2.6",
     "@radix-ui/react-slot": "^1.2.4",
+=======
+    "@radix-ui/react-scroll-area": "^1.2.10",
+>>>>>>> Stashed changes
     "axios": "^1.12.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dotenv": "^17.2.3",
+<<<<<<< Updated upstream
     "lucide-react": "^0.552.0",
+=======
+    "lucide-react": "^0.548.0",
+>>>>>>> Stashed changes
     "mongodb": "^6.20.0",
     "mongoose": "^8.19.2",
     "next": "15.5.4",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+<<<<<<< Updated upstream
     "swr": "^2.3.6",
     "tailwind-merge": "^3.3.1"
+=======
+    "shadcn-ui": "^0.9.5",
+    "swr": "^2.3.6",
+    "tailwind-merge": "^3.3.1",
+    "tailwind-variants": "^3.1.1"
+>>>>>>> Stashed changes
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

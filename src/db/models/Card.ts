@@ -123,6 +123,7 @@ const FaceSchema = new Schema({
 const CardSchema = new Schema(
   {
     scryfall_id: { type: String, required: true, unique: true },
+<<<<<<< Updated upstream
     name: String,
     set: String,
     set_name: String,
@@ -139,6 +140,23 @@ const CardSchema = new Schema(
     number: String,
     lang: String,
     isFoil: Boolean,
+=======
+    name: { type: String, required: true },
+    set: { type: String, required: true },
+    set_name: { type: String, required: true },
+    rarity: { type: String },
+    artist: { type: String },
+    type_line: { type: String },
+    colors: { type: [String], default: [] },
+    legalities: { type: Object, default: {} },
+    faces: { type: [FaceSchema], default: [] },
+
+    // Дополнительные поля из формы
+    prices: { type: String, default: "" },
+    number: { type: String, default: "" },
+    lang: { type: String, default: "en" },
+    isFoil: { type: Boolean, default: false },
+>>>>>>> Stashed changes
   },
   {
     timestamps: true,

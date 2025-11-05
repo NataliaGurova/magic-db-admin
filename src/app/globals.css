@@ -1,6 +1,10 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
 @custom-variant dark (&:is(.dark *));
 
 /* @theme inline {
