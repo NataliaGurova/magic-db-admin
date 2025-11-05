@@ -1,7 +1,6 @@
 
 import { NextResponse } from "next/server";
 import { connectDB } from "@/db/mongodb";
-// import Card from "@/db/models/Card";
 import { mapToCardData } from "@/lib/scryfall";
 import { Card } from "@/db/models/Card";
 
