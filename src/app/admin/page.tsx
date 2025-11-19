@@ -1034,6 +1034,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
+import { useRouter } from "next/navigation";
+
 // ответ Scryfall “list”
 interface ScryfallListResponse<T> {
   object: "list";
@@ -1065,6 +1067,9 @@ interface SetItem {
 type MappedCard = ReturnType<typeof mapToCardData>;
 
 export default function AdminPage() {
+
+  const router = useRouter();
+
   // 1. что ввёл пользователь
   const [name, setName] = useState<string>("");
 
@@ -1182,19 +1187,13 @@ export default function AdminPage() {
     };
   }, [name]);
 
-  // ======== РАЗМЕТКА (не меняем) ========
+  // ======== РАЗМЕТКА предідущая ========
   return (
     <main className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-6">
       <h1 className="text-2xl font-semibold">Add Magic Card</h1>
 
       {/* Ввод имени карты */}
       <div className="space-y-2">
-        {/* <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="w-[400px] rounded-lg border p-3"
-          placeholder="Введите название карты…"
-        /> */}
 
         <Input
           value={name}
@@ -1268,9 +1267,9 @@ export default function AdminPage() {
                 {/* 🔹 Название + оформление */}
                 <div className="text-sm font-semibold mb-2">
                   {variant.name}{" "}
-                  {variant.number && (
+                  {variant.quantity && (
                     <span className="text-gray-500 text-xs">
-                      #{variant.number}
+                      #{variant.quantity}
                     </span>
                   )}
                   <div className="text-xs text-gray-700 mt-0.5">
@@ -1302,42 +1301,12 @@ export default function AdminPage() {
                   <div>Номер в колекции: {variant.collector_number}</div>
                 </div>
 
-                {/* 💾 кнопка (оставляю как в разметке) */}
-                {/* <button
-                  onClick={() =>
-                    console.log("💾 Добавить", variant.scryfall_id, variant)
-                  }
-                  className="mt-3 w-full rounded-lg bg-black text-white py-2 text-sm hover:bg-gray-800"
-                >
-                  Добавить в базу
-                </button> */}
                 <Button
-  onClick={async () => {
-    try {
-      const res = await fetch("/api/cards", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(variant),
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        alert(`✅ ${data.message}`);
-      } else if (res.status === 409) {
-        alert("⚠️ Эта карта уже есть в базе");
-      } else {
-        alert(`❌ Ошибка: ${data.message}`);
-      }
-    } catch (err) {
-      console.error("Ошибка при добавлении:", err);
-      alert("⚠️ Не удалось добавить карту");
-    }
-  }}
-  className="mt-3 w-full bg-black text-white hover:bg-gray-800"
->
-  Добавить в базу
-</Button>
+      onClick={() => router.push(`/admin/add/${variant.scryfall_id}`)}
+      className="mt-3 w-full bg-black text-white hover:bg-gray-800"
+    >
+      Добавить в базу
+    </Button>
 
               </div>
             ))}
@@ -1347,3 +1316,50 @@ export default function AdminPage() {
     </main>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+{/* 💾 кнопка (оставляю как в разметке) */}
+{/* <button
+  onClick={() =>
+    console.log("💾 Добавить", variant.scryfall_id, variant)
+  }
+  className="mt-3 w-full rounded-lg bg-black text-white py-2 text-sm hover:bg-gray-800"
+>
+  Добавить в базу
+</button> */}
+{/* <Button
+onClick={async () => {
+try {
+const res = await fetch("/api/cards", {
+method: "POST",
+headers: { "Content-Type": "application/json" },
+body: JSON.stringify(variant),
+});
+
+const data = await res.json();
+
+if (res.ok) {
+alert(`✅ ${data.message}`);
+} else if (res.status === 409) {
+alert("⚠️ Эта карта уже есть в базе");
+} else {
+alert(`❌ Ошибка: ${data.message}`);
+}
+} catch (err) {
+console.error("Ошибка при добавлении:", err);
+alert("⚠️ Не удалось добавить карту");
+}
+}}
+className="mt-3 w-full bg-black text-white hover:bg-gray-800"
+>
+Добавить в базу
+</Button> */}

@@ -134,16 +134,29 @@ const CardSchema = new Schema(
     faces: [FaceSchema],
     variant: String,
     foilType: String,
-    prices: String,
     collector_number: String,
-    number: String,
+    prices: { type: Number, default: 0 },
+    quantity: { type: Number, default: 0 },
     lang: String,
     isFoil: Boolean,
+     // 🔹 поле состояния карты
+    condition: {
+      type: String,
+      enum: ["NM", "LP", "HP"],
+      default: "NM",
+      required: true,
+    },
   },
   {
     timestamps: true,
     versionKey: false,
   }
+);
+
+// 🔹 теперь уникальность проверяем по (scryfall_id + foilType + lang + condition)
+  CardSchema.index(
+  { scryfall_id: 1, foilType: 1, lang: 1, condition: 1 },
+  { unique: true }
 );
 
 export const Card = models.Card || model("Card", CardSchema);

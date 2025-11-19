@@ -111,7 +111,21 @@ export function mapToCardData(card: ScryfallCard) {
             side: "front",
             imageUrl: card.image_uris?.large ?? card.image_uris?.normal ?? "",
           },
-        ];
+      ];
+  
+  // 🧩 Логика для цвета:
+  // если нет цветов и карта не земля → ["colorless"]
+  // если земля → []
+  const isLand = (card.type_line ?? "").toLowerCase().includes("land");
+  let finalColors: string[] = [];
+
+  if (card.colors && card.colors.length > 0) {
+    finalColors = card.colors;
+  } else if (isLand) {
+    finalColors = [];
+  } else {
+    finalColors = ["Colorless"];
+  }
 
   return {
     scryfall_id: card.id,
@@ -121,16 +135,19 @@ export function mapToCardData(card: ScryfallCard) {
     rarity: card.rarity ?? "",
     artist: card.artist ?? "",
     type_line: card.type_line ?? "",
-    colors: card.colors ?? [],
+    // colors: card.colors ?? [],
+    colors: finalColors,
     legalities: card.legalities ?? {},
     faces,
     variant,
-    foilType: "nonfoil", // админ выберет вручную
+    foilType: "nonfoil" as "nonfoil" | "foil" | "etched" | "surgefoil" | "rainbowfoil",
     prices: "",
     collector_number: card.collector_number ?? "",
-    number: "",
+    quantity: "",
     lang: card.lang ?? "en",
     isFoil: false,
+    condition: "NM",
+
   };
 }
 
