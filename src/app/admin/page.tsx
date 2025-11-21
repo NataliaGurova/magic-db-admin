@@ -336,10 +336,7 @@ export default function AdminPage() {
           {/* ==== SELECTED SET VARIANTS ==== */}
           {setVariants.length > 0 && (
             <section className="mt-8 space-y-4">
-              <h3 className="text-xl font-semibold">
-                Варианты в сете {setVariants[0].set_name} ({setVariants.length})
-              </h3>
-  
+
               <div className="grid sm:grid-cols-2 gap-4">
                 {setVariants.map((variant) => (
                   <div
@@ -444,12 +441,12 @@ export default function AdminPage() {
 
           {/* RIGHT: INFO */}
           <div className="flex flex-col text-sm space-y-0.5 text-gray-700">
-            <div><span className="font-medium">{card.variant}</span></div>
-            <div>Foil: <span className="font-medium">{card.isFoil ? card.foilType : "nonfoil"}</span></div>
-            <div>Состояние: <span className="font-medium">{card.condition}</span></div>
-            <div>Язык: <span className="font-medium">{card.lang}</span></div>
-            <div>Цена: <span className="font-medium">{card.prices}</span></div>
-            <div>Кол-во: <span className="font-medium">{card.quantity}</span></div>
+            <div><span className="font-medium text-red-700">{card.variant}</span></div>
+            <div>Foil: <span className="font-medium text-black">{card.isFoil ? card.foilType : "nonfoil"}</span></div>
+            <div>Состояние: <span className="font-medium text-black">{card.condition}</span></div>
+            <div>Язык: <span className="font-medium text-black">{card.lang}</span></div>
+            <div>Цена: <span className="font-medium text-black">{card.prices}</span></div>
+            <div>Кол-во: <span className="font-medium text-black">{card.quantity}</span></div>
           </div>
         </div>
 
