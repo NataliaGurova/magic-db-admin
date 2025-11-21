@@ -128,29 +128,41 @@ export async function POST(req: Request) {
     const newCard = await Card.create(fullCard);
 
     return NextResponse.json({ ok: true, card: newCard }, { status: 201 });
-  } catch (error) {
-    console.error("❌ Ошибка при POST /api/cards:", error);
+  // } catch (error) {
+  //   console.error("❌ Ошибка при POST /api/cards:", error);
 
-    // ловим дубликат по уникальному индексу
-    if (
-      typeof error === "object" &&
-      error !== null &&
-      "code" in error &&
-      (error as { code: number }).code === 11000
-    ) {
+  //   // ловим дубликат по уникальному индексу
+  //   if (
+  //     typeof error === "object" &&
+  //     error !== null &&
+  //     "code" in error &&
+  //     (error as { code: number }).code === 11000
+  //   ) {
+  //     return NextResponse.json(
+  //       {
+  //         message: "Такая карта уже существует в базе (уникальный индекс)",
+  //       },
+  //       { status: 409 }
+  //     );
+  //   }
+
+  //   return NextResponse.json(
+  //     { error: "Ошибка на сервере" },
+  //     { status: 500 }
+  //   );
+    // }
+  // проверкааааааааааааааааааааааааааааа
+  } catch (error) {
+      console.error("❌ Ошибка при POST /api/cards:", error);
+  
       return NextResponse.json(
         {
-          message: "Такая карта уже существует в базе (уникальный индекс)",
+          error: "SERVER ERROR",
+          details: error instanceof Error ? error.message : String(error),
         },
-        { status: 409 }
+        { status: 500 }
       );
     }
-
-    return NextResponse.json(
-      { error: "Ошибка на сервере" },
-      { status: 500 }
-    );
-  }
 }
 
 /**
