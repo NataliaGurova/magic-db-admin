@@ -4,21 +4,7 @@ import { connectDB } from "@/db/mongodb";
 import { mapToCardData } from "@/lib/scryfall";
 import { Card } from "@/db/models/Card";
 
-/**
- * 🔹 GET — получить все карточки из базы
- */
-// export async function GET() {
-//   try {
-//     await connectDB();
-//     const cards = await Card.find().sort({ createdAt: -1 });
-//     return NextResponse.json(cards);
-//   } catch (error) {
-//     console.error("❌ Ошибка при загрузке карт:", error);
-//     return NextResponse.json({ error: "Ошибка при получении карт" }, { status: 500 });
-//   }
-// }
-
-// 🔹 Получить карту по scryfall_id
+// 🔹 GET — получить карту по Mongo `_id` (для редактирования)
 export async function GET(req: Request) {
   try {
     await connectDB();
@@ -29,7 +15,8 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Не указан id" }, { status: 400 });
     }
 
-    const card = await Card.findOne({ scryfall_id: id });
+    const card = await Card.findById(id);
+    // const card = await Card.findOne({ scryfall_id: id });
 
     if (!card) {
       return NextResponse.json({ exists: false }, { status: 200 });
@@ -37,13 +24,13 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ exists: true, card }, { status: 200 });
   } catch (err) {
-    console.error("❌ Ошибка при GET /cards:", err);
-    return NextResponse.json({ error: "Ошибка на сервере" }, { status: 500 });
+    console.error("❌ Ошибка при GET /api/cards:", err);
+    return NextResponse.json(
+      { error: "Ошибка на сервере" },
+      { status: 500 }
+    );
   }
 }
-
-
-
 
 /**
  * 🔹 POST — добавить новую карту в базу
@@ -52,7 +39,17 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     await connectDB();
-    const body = await req.json();
+    const body = await req.json() as {
+      scryfall_id?: string;
+      prices?: string;
+      quantity?: string;
+      lang?: string;
+      isFoil?: boolean;
+      variant?: string;
+      foilType?: string;
+      condition?: string;
+    };
+    // const body = await req.json();
 
     const {
       scryfall_id,
@@ -62,74 +59,79 @@ export async function POST(req: Request) {
       isFoil,
       variant,
       foilType,
-      condition, 
+      condition,
     } = body;
-    
 
     if (!scryfall_id) {
-      return NextResponse.json({ error: "Отсутствует scryfall_id" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Отсутствует scryfall_id" },
+        { status: 400 }
+      );
     }
 
-    // Проверка на дубликат
-    const exists = await Card.findOne({ scryfall_id, lang, isFoil, variant, condition });
+    // Проверка дубликата
+    const exists = await Card.findOne({
+      scryfall_id,
+      lang,
+      isFoil,
+      variant,
+      condition,
+    });
+
     if (exists) {
       return NextResponse.json(
         {
-          error: "Карта с таким языком, фойлом и оформлением уже есть в базе",
-          cardId: exists._id,
+          message: "Такая карта уже есть в базе",
+          card: exists,
         },
         { status: 409 }
       );
     }
 
-    // Получаем данные с Scryfall API
-    const res = await fetch(`https://api.scryfall.com/cards/${scryfall_id}`);
-    if (!res.ok) {
-      return NextResponse.json({ error: "Не удалось получить данные с Scryfall" }, { status: 404 });
+    // Подтягиваем данные из Scryfall
+    const scryRes = await fetch(`https://api.scryfall.com/cards/${scryfall_id}`);
+    if (!scryRes.ok) {
+      return NextResponse.json(
+        { error: "Не удалось получить данные с Scryfall" },
+        { status: 404 }
+      );
     }
 
-    const data = await res.json();
-    const base = mapToCardData(data);
+    const scryData = await scryRes.json();
+    const base = mapToCardData(scryData);
 
-    let normalizedPrice = 0;
-    if (typeof prices === "string" && prices.trim() !== "") {
-      const num = Number(prices.trim());
-      if (!isNaN(num)) {
-        normalizedPrice = num;
-      }
-    }
-    
-    // 🔹 Преобразуем количество к числу
-    let normalizedCount = 0;
-    if (typeof quantity === "string" && quantity.trim() !== "") {
-      const num = Number(quantity.trim());
-      if (!isNaN(num)) {
-        normalizedCount = num;
-      }
-    }
-    
-    // Формируем финальный объект
+    // Нормализация цены и количества
+    const normalizedPrice =
+      prices && prices.trim() !== "" && !Number.isNaN(Number(prices))
+        ? Number(prices)
+        : 0;
+
+    const normalizedQuantity =
+      quantity && quantity.trim() !== "" && !Number.isNaN(Number(quantity))
+        ? Number(quantity)
+        : 0;
+        // const normalizedPrice = Number(prices) || 0;
+        // const normalizedCount = Number(quantity) || 0;
+
     const fullCard = {
       ...base,
-      prices: normalizedPrice,   // число
-      quantity: normalizedCount,   // число ✅
-      lang,
-      isFoil,
-      variant,
-      foilType,
-      condition,
+      scryfall_id,
+      prices: normalizedPrice,
+      quantity: normalizedQuantity,
+      lang: lang ?? base.lang,
+      isFoil: Boolean(isFoil),
+      variant: variant ?? base.variant,
+      foilType: foilType ?? base.foilType,
+      condition: condition ?? base.condition,
     };
-    
 
-
-    // Сохраняем в базу
     const newCard = await Card.create(fullCard);
 
     return NextResponse.json({ ok: true, card: newCard }, { status: 201 });
-  } catch (error: unknown) {
-    console.error("❌ Ошибка при сохранении:", error);
+  } catch (error) {
+    console.error("❌ Ошибка при POST /api/cards:", error);
 
-    // Ошибка MongoDB — дубликат уникального индекса
+    // ловим дубликат по уникальному индексу
     if (
       typeof error === "object" &&
       error !== null &&
@@ -137,70 +139,75 @@ export async function POST(req: Request) {
       (error as { code: number }).code === 11000
     ) {
       return NextResponse.json(
-        { error: "Такая карта уже существует в базе (уникальный индекс)" },
+        {
+          message: "Такая карта уже существует в базе (уникальный индекс)",
+        },
         { status: 409 }
       );
     }
 
-    return NextResponse.json({ error: "Ошибка на сервере" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Ошибка на сервере" },
+      { status: 500 }
+    );
   }
 }
 
+/**
+ * 🔹 PATCH — обновить ТОЛЬКО price и quantity по Mongo `_id`
+ */
+export async function PATCH(req: Request) {
+  try {
+    await connectDB();
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
 
+    if (!id) {
+      return NextResponse.json({ error: "Не указан id" }, { status: 400 });
+    }
 
-// //   второй вариант ===========================
-// import { NextResponse } from "next/server";
-// import { connectDB } from "@/db/mongodb";
-// import { Card } from "@/db/models/Card";
+    const body = await req.json() as {
+      prices?: string;
+      quantity?: string;
+    };
 
-// export async function POST(req: Request) {
-//   try {
-//     await connectDB();
-//     const body = await req.json();
+    const { prices, quantity } = body;
 
-//     const existing = await Card.findOne({ scryfall_id: body.scryfall_id });
-//     if (existing) {
-//       return NextResponse.json(
-//         { message: "Карта уже есть в базе" },
-//         { status: 409 }
-//       );
-//     }
+    const normalizedPrice =
+      prices && prices.trim() !== "" && !Number.isNaN(Number(prices))
+        ? Number(prices)
+        : 0;
 
-//     const newCard = await Card.create(body);
-//     return NextResponse.json({ message: "Добавлено", card: newCard });
-//   } catch (err) {
-//     console.error("Ошибка при сохранении:", err);
-//     return NextResponse.json({ message: "Ошибка сервера" }, { status: 500 });
-//   }
-// }
+    const normalizedQuantity =
+      quantity && quantity.trim() !== "" && !Number.isNaN(Number(quantity))
+        ? Number(quantity)
+        : 0;
 
+    const updated = await Card.findByIdAndUpdate(
+      id,
+      {
+        prices: normalizedPrice,
+        quantity: normalizedQuantity,
+      },
+      { new: true }
+    );
 
+    if (!updated) {
+      return NextResponse.json(
+        { error: "Карта не найдена" },
+        { status: 404 }
+      );
+    }
 
-// // 🔹 PUT   для обновления по scryfall_id !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-// export async function PUT(req: Request) {
-//   try {
-//     await connectDB();
-//     const body = await req.json();
-//     const { scryfall_id, ...updates } = body;
-
-//     if (!scryfall_id) {
-//       return NextResponse.json({ error: "Не указан scryfall_id" }, { status: 400 });
-//     }
-
-//     const updated = await Card.findOneAndUpdate(
-//       { scryfall_id },
-//       { $set: updates },
-//       { new: true }
-//     );
-
-//     if (!updated) {
-//       return NextResponse.json({ error: "Карта не найдена" }, { status: 404 });
-//     }
-
-//     return NextResponse.json({ ok: true, card: updated }, { status: 200 });
-//   } catch (err) {
-//     console.error("❌ Ошибка при PUT /cards:", err);
-//     return NextResponse.json({ error: "Ошибка на сервере" }, { status: 500 });
-//   }
-// }
-
+    return NextResponse.json(
+      { ok: true, card: updated },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("❌ Ошибка при PATCH /api/cards:", error);
+    return NextResponse.json(
+      { error: "Ошибка на сервере" },
+      { status: 500 }
+    );
+  }
+}

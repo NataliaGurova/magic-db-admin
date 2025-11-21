@@ -1,8 +1,9 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,56 +13,139 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-import { fetchPrintsByName, mapToCardData, ScryfallCard } from "@/lib/scryfall";
+import { mapToCardData, ScryfallCard } from "@/lib/scryfall";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 
+type FoilType = "nonfoil" | "foil" | "etched" | "surgefoil" | "rainbowfoil";
+type Condition = "NM" | "LP" | "HP";
+
+interface CardFace {
+  side: string;
+  imageUrl: string;
+}
+
 interface CardForm {
+  scryfall_id: string;
   name: string;
   set_name: string;
   rarity: string;
   type_line: string;
   colors: string[];
-  faces: Array<{ side: string; imageUrl: string }>;
+  faces: CardFace[];
   variant: string;
-  // foilType: string;
-  foilType: "nonfoil" | "foil" | "etched" | "surgefoil" | "rainbowfoil";
-  prices: string;
+  foilType: FoilType;
+  prices: string;      // ← в форме ВСЕГДА строка
+  quantity: string;    // ← в форме ВСЕГДА строка
   collector_number: string;
-  quantity: string;
   lang: string;
   isFoil: boolean;
-  condition: string;
-  // condition: "NM" | "LP" | "HP";
+  condition: Condition;
 }
 
+// Карта из БД (то, что приходит из /api/cards)
+interface DbCard extends Omit<CardForm, "prices" | "quantity"> {
+  _id: string;
+  prices: number;
+  quantity: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
 
 export default function AddCardPage() {
   const { id } = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
   const router = useRouter();
+
+  const dbId = searchParams.get("db"); // ?db=<mongoId>, если редактируем
+
   const [card, setCard] = useState<CardForm | null>(null);
-
   const [loading, setLoading] = useState(true);
-  const [exists, setExists] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [isEditing, setIsEditing] = useState(false); // режим редактирования существующей карты
 
+  // универсальный апдейтер
+  const update = <K extends keyof CardForm>(key: K, value: CardForm[K]) => {
+    setCard((prev) => (prev ? { ...prev, [key]: value } : prev));
+  };
 
+  // ===== Загрузка: либо из БД (редактирование), либо из Scryfall (новая) =====
   useEffect(() => {
-    const loadCard = async () => {
-      
+    const load = async () => {
       try {
-        const res = await fetch(`https://api.scryfall.com/cards/${id}`);
-        const data: ScryfallCard = await res.json();
-        setCard(mapToCardData(data));
-      } catch (err) {
-        console.error("Ошибка загрузки карты:", err);
+        // 1) Если есть dbId — редактируем уже существующую карту
+        if (dbId) {
+          const res = await fetch(`/api/cards?id=${encodeURIComponent(dbId)}`);
+          if (res.ok) {
+            const data = await res.json();
+
+            if (data.exists && data.card) {
+              const dbCard = data.card as DbCard;
+
+              const formCard: CardForm = {
+                scryfall_id: dbCard.scryfall_id,
+                name: dbCard.name,
+                set_name: dbCard.set_name,
+                rarity: dbCard.rarity,
+                type_line: dbCard.type_line,
+                colors: dbCard.colors,
+                faces: dbCard.faces,
+                variant: dbCard.variant,
+                foilType: dbCard.foilType,
+                prices: dbCard.prices.toString(),
+                quantity: dbCard.quantity.toString(),
+                collector_number: dbCard.collector_number,
+                lang: dbCard.lang,
+                isFoil: dbCard.isFoil,
+                condition: dbCard.condition,
+              };
+
+              setCard(formCard);
+              setIsEditing(true);
+              setLoading(false);
+              return;
+            }
+          }
+        }
+
+        // 2) Новая карта — грузим Scryfall
+        const scryRes = await fetch(`https://api.scryfall.com/cards/${id}`);
+        const scryData: ScryfallCard = await scryRes.json();
+        const base = mapToCardData(scryData);
+
+        const formFromScry: CardForm = {
+          scryfall_id: base.scryfall_id,
+          name: base.name,
+          set_name: base.set_name,
+          rarity: base.rarity,
+          type_line: base.type_line,
+          colors: base.colors,
+          faces: base.faces,
+          variant: base.variant,
+          foilType: base.foilType,
+          prices: "",
+          quantity: "",
+          collector_number: base.collector_number,
+          lang: base.lang,
+          isFoil: base.isFoil,
+          condition: base.condition as Condition,
+        };
+
+        setCard(formFromScry);
+        setIsEditing(false);
+      } catch (error) {
+        console.error("Ошибка загрузки карты:", error);
+      } finally {
+        setLoading(false);
       }
+    };
+
+    if (id) {
+      void load();
     }
-    if (id) loadCard();
-      }, [id]);
-      
+  }, [id, dbId]);
 
-
-  if (!card) {
+  if (loading || !card) {
     return (
       <div className="p-10 text-center text-gray-600">
         Загрузка данных карты...
@@ -69,20 +153,121 @@ export default function AddCardPage() {
     );
   }
 
+  // ===== Сохранение НОВОЙ карты (POST) =====
+  const handleCreate = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/cards", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(card),
+      });
+
+      const data = await res.json();
+
+      if (res.status === 409 && data.card) {
+        // дубликат — карта уже есть в базе
+        alert("⚠️ Такая карта уже есть в базе. Подгружаю её данные.");
+        const dbCard = data.card as DbCard;
+
+        const formCard: CardForm = {
+          scryfall_id: dbCard.scryfall_id,
+          name: dbCard.name,
+          set_name: dbCard.set_name,
+          rarity: dbCard.rarity,
+          type_line: dbCard.type_line,
+          colors: dbCard.colors,
+          faces: dbCard.faces,
+          variant: dbCard.variant,
+          foilType: dbCard.foilType,
+          prices: dbCard.prices.toString(),
+          quantity: dbCard.quantity.toString(),
+          collector_number: dbCard.collector_number,
+          lang: dbCard.lang,
+          isFoil: dbCard.isFoil,
+          condition: dbCard.condition,
+        };
+
+        setCard(formCard);
+        setIsEditing(true);
+        if (dbCard._id) {
+          router.replace(
+            `/admin/add/${dbCard.scryfall_id}?db=${encodeURIComponent(dbCard._id)}`
+          );
+        }
+        return;
+      }
+
+      if (!res.ok) {
+        alert(`❌ Ошибка: ${data.message ?? data.error ?? "Неизвестно"}`);
+        return;
+      }
+
+      alert("✅ Карта добавлена");
+      router.push("/admin");
+    } catch (error) {
+      console.error("Ошибка при добавлении:", error);
+      alert("❌ Ошибка при добавлении карты");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ===== Обновление ТОЛЬКО цены и количества (PATCH) =====
+  const handleUpdate = async () => {
+    if (!dbId) return;
+
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/cards?id=${encodeURIComponent(dbId)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prices: card.prices,
+          quantity: card.quantity,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(`❌ Ошибка: ${data.message ?? data.error ?? "Неизвестно"}`);
+        return;
+      }
+
+      alert("✅ Цена и количество обновлены");
+      router.push("/admin");
+    } catch (error) {
+      console.error("Ошибка при обновлении:", error);
+      alert("❌ Ошибка при обновлении карты");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveClick = () => {
+    if (isEditing) {
+      void handleUpdate();
+    } else {
+      void handleCreate();
+    }
+  };
+
+  // ================== UI ==================
   return (
     <main className="min-h-screen bg-gray-100 flex flex-col items-center p-6">
       <h1 className="text-2xl font-semibold mb-6">
-        Добавить карту в базу
+        {isEditing ? "Редактирование карты" : "Добавить карту в базу"}
       </h1>
 
       <div className="bg-white shadow-lg rounded-xl p-6 w-full max-w-2xl space-y-6">
-        {/* Изображение */}
-        <div className="flex justify-center">
-          {card.faces.map((face, i) => (
+        {/* Картинки */}
+        <div className="flex justify-center gap-3">
+          {card.faces.map((face) => (
             <Image
-              key={i}
+              key={face.side}
               src={face.imageUrl}
-              alt={`${card.name}-face-${i}`}
+              alt={`${card.name}-${face.side}`}
               width={250}
               height={350}
               className="rounded-lg border"
@@ -90,8 +275,8 @@ export default function AddCardPage() {
           ))}
         </div>
 
-        {/* Основные данные */}
-        <div className="space-y-3 text-sm">
+        {/* Основные данные (только чтение) */}
+        <div className="space-y-2 text-sm">
           <p>
             <strong>Название:</strong> {card.name}
           </p>
@@ -113,178 +298,108 @@ export default function AddCardPage() {
           </p>
         </div>
 
-        <div className="space-y-4">
-        {/* Настройки перед добавлением */}
-        {/* <div className="space-y-4">
-          foilType
-          <div>
-            <label className="block mb-1 text-sm font-medium text-gray-700">
-              Foil Type
-            </label>
+        {/* Foil (при редактировании — только просмотр) */}
+        <div className="flex items-center gap-4">
+          <Switch
+            checked={card.isFoil}
+            disabled={isEditing}
+            onCheckedChange={(checked) => {
+              if (isEditing) return;
+              update("isFoil", checked);
+              update("foilType", checked ? "foil" : "nonfoil");
+            }}
+          />
+          <Label className={isEditing ? "opacity-60" : ""}>Foil версия</Label>
+
+          {card.isFoil && (
             <Select
+              disabled={isEditing}
               value={card.foilType}
-              onValueChange={(value) =>
-                setCard((prev) => (prev ? { ...prev, foilType: value } : prev))
+              onValueChange={(val) =>
+                update("foilType", val as FoilType)
               }
             >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Выберите тип" />
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="Тип foil" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="nonfoil">Nonfoil</SelectItem>
                 <SelectItem value="foil">Foil</SelectItem>
                 <SelectItem value="etched">Etched</SelectItem>
                 <SelectItem value="surgefoil">Surgefoil</SelectItem>
                 <SelectItem value="rainbowfoil">Rainbowfoil</SelectItem>
               </SelectContent>
             </Select>
-          </div> */}
+          )}
+        </div>
 
+        {/* Состояние (при редактировании тоже нельзя менять) */}
+        <div>
+          <label className="block mb-1 text-sm font-medium">
+            Состояние карты
+          </label>
+          <Select
+            disabled={isEditing}
+            value={card.condition}
+            onValueChange={(value) =>
+              update("condition", value as Condition)
+            }
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Выберите состояние" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="NM">Near Mint (NM)</SelectItem>
+              <SelectItem value="LP">Lightly Played (LP)</SelectItem>
+              <SelectItem value="HP">Heavily Played (HP)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
-          {/* 🔹 Foil версия */}
-<div className="flex items-center gap-6 mt-2">
-  {/* Переключатель */}
-  <div className="flex items-center gap-3">
-    <Switch
-      id="isFoil"
-      checked={card.isFoil}
-      onCheckedChange={(checked) =>
-        setCard((prev) =>
-          prev
-            ? {
-                ...prev,
-                isFoil: checked,
-                foilType: checked ? "foil" : "nonfoil",
-              }
-            : prev
-        )
-      }
-    />
-    <Label htmlFor="isFoil" className="text-sm font-medium text-gray-800">
-      Foil версия
-    </Label>
-  </div>
+        {/* Цена */}
+        <div>
+          <label className="block mb-1 text-sm font-medium">Цена</label>
+          <Input
+            type="number"
+            min="0"
+            step="1"
+            value={card.prices}
+            onChange={(e) => update("prices", e.target.value)}
+            placeholder="0"
+          />
+        </div>
 
-  {/* Селект для выбора типа фойла */}
-  {card.isFoil && (
-    <div className="flex items-center gap-2">
-      <Label className="text-sm text-gray-700">Тип:</Label>
-      <Select
-        value={card.foilType}
-        onValueChange={(val) =>
-          setCard((prev) => (prev ? { ...prev, foilType: val as CardForm["foilType"] } : prev))
-        }
-      >
-        <SelectTrigger className="w-[150px]">
-          <SelectValue placeholder="Выбери тип" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="foil">Foil</SelectItem>
-          <SelectItem value="etched">Etched</SelectItem>
-          <SelectItem value="surgefoil">Surgefoil</SelectItem>
-          <SelectItem value="rainbowfoil">Rainbowfoil</SelectItem>
-        </SelectContent>
-      </Select>
-    </div>
-  )}
-</div>
+        {/* Количество */}
+        <div>
+          <label className="block mb-1 text-sm font-medium">Количество</label>
+          <Input
+            type="number"
+            min="0"
+            step="1"
+            value={card.quantity}
+            onChange={(e) => update("quantity", e.target.value)}
+            placeholder="0"
+          />
+        </div>
 
-          {/* Состояние карты */}
-<div>
-  <label className="block mb-1 text-sm font-medium text-gray-700">
-    Состояние карты
-  </label>
-  <Select
-    value={card.condition}
-    onValueChange={(value) =>
-      setCard((prev) => (prev ? { ...prev, condition: value } : prev))
-    }
-  >
-    <SelectTrigger className="w-full">
-      <SelectValue placeholder="Выберите состояние" />
-    </SelectTrigger>
-    <SelectContent>
-      <SelectItem value="NM">Near Mint (NM)</SelectItem>
-      <SelectItem value="LP">Lightly Played (LP)</SelectItem>
-      <SelectItem value="HP">Heavily Played (HP)</SelectItem>
-    </SelectContent>
-  </Select>
-</div>
-
-
-
-          {/* Цена (USD) */}
-<div>
-  <label className="block mb-1 text-sm font-medium text-gray-700">
-    Цена (USD)
-  </label>
-  <Input
-    type="number"
-    step="1"
-    min="0"
-    value={card.prices}
-    onChange={(e) =>
-      setCard((prev) => (prev ? { ...prev, prices: e.target.value } : prev))
-    }
-    placeholder="0"
-  />
-</div>
-
-
-          {/* Количество */}
-          <div>
-            <label className="block mb-1 text-sm font-medium text-gray-700">
-              Количество
-            </label>
-            <Input
-              type="number"
-              value={card.quantity}
-              onChange={(e) =>
-                setCard((prev) =>
-                  prev ? { ...prev, quantity: e.target.value } : prev
-                )
-              }
-              placeholder="0"
-            />
-          </div>
-
-          {/* Язык */}
-          <div>
-            <label className="block mb-1 text-sm font-medium text-gray-700">
-              Язык
-            </label>
-            <Select
-              value={card.lang}
-              onValueChange={(value) =>
-                setCard((prev) => (prev ? { ...prev, lang: value } : prev))
-              }
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Выберите язык" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="en">English</SelectItem>
-                <SelectItem value="ru">Русский</SelectItem>
-                <SelectItem value="fr">Français</SelectItem>
-                <SelectItem value="de">Deutsch</SelectItem>
-                <SelectItem value="jp">日本語</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Фойл чекбокс */}
-          {/* <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={card.isFoil}
-              onChange={(e) =>
-                setCard((prev) =>
-                  prev ? { ...prev, isFoil: e.target.checked } : prev
-                )
-              }
-            />
-            <label>Foil версия</label>
-          </div> */}
+        {/* Язык (при редактировании — нельзя менять) */}
+        <div>
+          <label className="block mb-1 text-sm font-medium">Язык</label>
+          <Select
+            disabled={isEditing}
+            value={card.lang}
+            onValueChange={(value) => update("lang", value)}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Выберите язык" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="en">English</SelectItem>
+              <SelectItem value="ru">Русский</SelectItem>
+              <SelectItem value="fr">Français</SelectItem>
+              <SelectItem value="de">Deutsch</SelectItem>
+              <SelectItem value="jp">日本語</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Кнопки */}
@@ -294,31 +409,18 @@ export default function AddCardPage() {
           </Button>
           <Button
             className="bg-black text-white hover:bg-gray-800"
-            onClick={async () => {
-              try {
-                const res = await fetch("/api/cards", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify(card),
-                });
-                const data = await res.json();
-                if (res.ok) {
-                  alert("✅ Карта добавлена");
-                  router.push("/admin");
-                } else {
-                  alert(`⚠️ Ошибка: ${data.message}`);
-                }
-              } catch (err) {
-                alert("❌ Ошибка при добавлении");
-                console.error(err);
-              }
-            }}
+            disabled={saving}
+            onClick={handleSaveClick}
           >
-            💾 Сохранить
+            {saving
+              ? "Сохраняю..."
+              : isEditing
+              ? "💾 Обновить цену и количество"
+              : "💾 Сохранить"}
           </Button>
-
         </div>
       </div>
     </main>
   );
 }
+
