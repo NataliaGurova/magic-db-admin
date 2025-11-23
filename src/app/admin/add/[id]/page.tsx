@@ -17,40 +17,14 @@ import { mapToCardData, ScryfallCard } from "@/lib/scryfall";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 
-type FoilType = "nonfoil" | "foil" | "etched" | "surgefoil" | "rainbowfoil";
-type Condition = "NM" | "LP" | "HP";
+import type {
+  CardForm,
+  DbCard,
+  FoilType,
+  Condition,
+} from "@/types/card-form";
 
-interface CardFace {
-  side: string;
-  imageUrl: string;
-}
 
-interface CardForm {
-  scryfall_id: string;
-  name: string;
-  set_name: string;
-  rarity: string;
-  type_line: string;
-  colors: string[];
-  faces: CardFace[];
-  variant: string;
-  foilType: FoilType;
-  prices: string;      // ← в форме ВСЕГДА строка
-  quantity: string;    // ← в форме ВСЕГДА строка
-  collector_number: string;
-  lang: string;
-  isFoil: boolean;
-  condition: Condition;
-}
-
-// Карта из БД (то, что приходит из /api/cards)
-interface DbCard extends Omit<CardForm, "prices" | "quantity"> {
-  _id: string;
-  prices: number;
-  quantity: number;
-  createdAt?: string;
-  updatedAt?: string;
-}
 
 export default function AddCardPage() {
   const { id } = useParams<{ id: string }>();
@@ -277,25 +251,14 @@ export default function AddCardPage() {
 
         {/* Основные данные (только чтение) */}
         <div className="space-y-2 text-sm">
-          <p>
-            <strong>Название:</strong> {card.name}
-          </p>
-          <p>
-            <strong>Сет:</strong> {card.set_name}
-          </p>
-          <p>
-            <strong>Редкость:</strong> {card.rarity}
-          </p>
-          <p>
-            <strong>Тип:</strong> {card.type_line}
-          </p>
-          <p>
-            <strong>Цвета:</strong>{" "}
+          <p><strong>Название:</strong> {card.name}</p>
+          <p><strong>Сет:</strong> {card.set_name}</p>
+          <p><strong>Редкость:</strong> {card.rarity}</p>
+          <p><strong>Тип:</strong> {card.type_line}</p>
+          <p><strong>Цвета:</strong>{" "}
             {card.colors.length > 0 ? card.colors.join(", ") : "—"}
           </p>
-          <p>
-            <strong>Оформление:</strong> {card.variant}
-          </p>
+          <p><strong>Оформление:</strong> {card.variant}</p>
         </div>
 
         {/* Foil (при редактировании — только просмотр) */}
