@@ -125,22 +125,14 @@ export default function AdminPage() {
   }, [name]);
 
   return (
-    <main className="min-h-screen bg-gray-100 p-6">
-      {/* HEADER */}
-      <div className="w-full mb-8 border-b pb-4">
+    <main className="min-h-screen bg-gray-100 px-6 py-10">
+      
+      <div className="max-w-6xl mx-auto px-6 mb-6">
         <div className="flex items-center gap-4">
-          <div className="w-10 h-10 flex items-center justify-center bg-gradient-to-br from-purple-600 to-indigo-700 text-white rounded-xl shadow-md">
-            <span className="text-xl font-bold">✦</span>
-          </div>
+        <h1 className="text-2xl font-bold mb-6">
+          Add new entry, Edit details
+        </h1>
 
-          <div className="flex items-center">
-            <h1 className="text-3xl font-bold text-gray-900 mr-32">
-              Adding & Editing Magic Card
-            </h1>
-            <p className="text-gray-500 text-sm mt-1">
-              Управление карточками из базы данных — добавление, редактирование и обновление.
-            </p>
-          </div>
         </div>
       </div>
 

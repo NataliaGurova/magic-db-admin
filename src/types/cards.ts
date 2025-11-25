@@ -1,6 +1,7 @@
 
 export interface Face {
-  imageUrl?: string;
+  side: string;
+  imageUrl: string;
 }
 
 export interface CardFromDB {
@@ -14,7 +15,7 @@ export interface CardFromDB {
   isFoil: boolean;
   foilType?: string;
   condition: string;
-  prices: string;
+  prices: number;
   quantity: number;
   faces?: Face[];
 }
@@ -56,7 +57,8 @@ export interface DbCard {
   isFoil: boolean;
 
   condition: "NM" | "LP" | "HP";
-  prices: string;
+  // проверить типы
+  prices: number;
   quantity: number;
   lang: string;
 }

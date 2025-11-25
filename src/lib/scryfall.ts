@@ -17,6 +17,8 @@ export interface ScryfallImageUris {
 export interface ScryfallCardFace {
   name: string;
   image_uris?: ScryfallImageUris;
+  colors?: string[];        // 👈 ДОБАВИЛИ
+  type_line?: string;       // 👈 полезно для некоторых DFC
 }
 
 /** --- Полная карточка из API Scryfall --- */
@@ -100,32 +102,130 @@ export function mapToCardData(card: ScryfallCard) {
   const variant = detectVariant(card);
 
   // Односторонние и двусторонние карты
-  const faces =
-    card.card_faces && card.card_faces.length > 0
-      ? card.card_faces.map((face, i) => ({
-          side: i === 0 ? "front" : "back",
-          imageUrl: face.image_uris?.large ?? face.image_uris?.normal ?? "",
-        }))
-      : [
-          {
-            side: "front",
-            imageUrl: card.image_uris?.large ?? card.image_uris?.normal ?? "",
-          },
-      ];
+  // const faces =
+  //   card.card_faces && card.card_faces.length > 0
+  //     ? card.card_faces.map((face, i) => ({
+  //         side: i === 0 ? "front" : "back",
+  //         imageUrl: face.image_uris?.large ?? face.image_uris?.normal ?? "",
+  //       }))
+  //     : [
+  //         {
+  //           side: "front",
+  //           imageUrl: card.image_uris?.large ?? card.image_uris?.normal ?? "",
+  //         },
+  //     ];
+
+// ===== UNIFIED IMAGE HANDLING =====
+
+let faces: Array<{ side: string; imageUrl: string }> = [];
+
+// Есть card_faces → возможно двусторонняя карта
+if (Array.isArray(card.card_faces) && card.card_faces.length > 0) {
+  // Проверяем: есть ли изображения у faces
+  const facesHaveImages = card.card_faces.some(
+    (f) => f.image_uris?.large || f.image_uris?.normal
+  );
+
+  if (facesHaveImages) {
+    // Нормальная двусторонняя карта
+    faces = card.card_faces.map((face, i) => ({
+      side: i === 0 ? "front" : "back",
+      imageUrl:
+        face.image_uris?.large ??
+        face.image_uris?.normal ??
+        "",
+    }));
+  } else {
+    // Кривые split/adventure карты без image_uris в faces
+    // → считаем односторонней
+    faces = [
+      {
+        side: "front",
+        imageUrl:
+          card.image_uris?.large ??
+          card.image_uris?.normal ??
+          "",
+      },
+    ];
+  }
+} else {
+  // Точно односторонняя карта
+  faces = [
+    {
+      side: "front",
+      imageUrl:
+        card.image_uris?.large ??
+        card.image_uris?.normal ??
+        "",
+    },
+  ];
+}
+
   
   // 🧩 Логика для цвета:
   // если нет цветов и карта не земля → ["colorless"]
   // если земля → []
-  const isLand = (card.type_line ?? "").toLowerCase().includes("land");
-  let finalColors: string[] = [];
+  // const isLand = (card.type_line ?? "").toLowerCase().includes("land");
+  // let finalColors: string[] = [];
 
-  if (card.colors && card.colors.length > 0) {
-    finalColors = card.colors;
-  } else if (isLand) {
-    finalColors = [];
-  } else {
-    finalColors = ["Colorless"];
-  }
+  // if (card.colors && card.colors.length > 0) {
+  //   finalColors = card.colors;
+  // } else if (isLand) {
+  //   finalColors = [];
+  // } else {
+  //   finalColors = ["Colorless"];
+  // }
+
+
+  // ===== COLOR HANDLING =====
+
+// Определяем, является ли карта землей
+const isLand = (card.type_line ?? "").toLowerCase().includes("land");
+
+let finalColors: string[] = [];
+
+// 1. Если есть цвета на верхнем уровне — берем их
+if (Array.isArray(card.colors) && card.colors.length > 0) {
+  finalColors = card.colors;
+}
+
+// 2. Если это земля — всегда []
+else if (isLand) {
+  finalColors = [];
+}
+
+// 3. Если есть card_faces и в них есть цвета
+else if (
+  Array.isArray(card.card_faces) &&
+  card.card_faces.length > 0
+) {
+  const faceColors = [
+    ...(card.card_faces[0]?.colors ?? []),
+    ...(card.card_faces[1]?.colors ?? []),
+  ];
+
+  // фильтруем дубли
+  const unique = [...new Set(faceColors)];
+
+//   if (unique.length > 0) {
+//     finalColors = unique;
+//   } else {
+//     finalColors = ["Colorless"];
+//   }
+// }
+
+// // 4. Во всех остальных случаях — Colorless
+// else {
+//   finalColors = ["Colorless"];
+// }
+
+
+finalColors = unique.length > 0 ? unique : ["Colorless"];
+} else {
+  finalColors = ["Colorless"];
+}
+  
+
 
   return {
     scryfall_id: card.id,
