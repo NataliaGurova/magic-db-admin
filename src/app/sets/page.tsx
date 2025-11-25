@@ -109,7 +109,7 @@ export default function SetsPage() {
   }, []);
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-10">
+    <main className="max-w-4xl mx-auto px-6 py-6">
       <h1 className="text-2xl font-bold mb-6">All Sets</h1>
 
       <div className="space-y-2">
@@ -121,22 +121,6 @@ export default function SetsPage() {
                       px-4 py-2 border rounded-md shadow-sm bg-white
                       hover:bg-gray-100 transition cursor-pointer"
           >
-            {/* <div className="flex items-center gap-3">
-              
-              <Image
-                src={`https://svgs.scryfall.io/sets/${s._id}.svg`}
-                onError={(e) => (e.currentTarget.style.opacity = "0.3")}
-                alt={`${s._id} icon`}
-                width={20}
-                height={20}
-                className="w-5 h-5 opacity-80 group-hover:opacity-100 transition"
-              />
-
-              
-              <span className="font-medium text-sm truncate">
-                {s.set_name}
-              </span>
-            </div> */}
 
             <div className="flex items-center gap-3">
 
@@ -182,7 +166,7 @@ export default function SetsPage() {
           </Link>
         ))}
       </div>
-    </div>
+    </main>
   );
 }
 

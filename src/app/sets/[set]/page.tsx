@@ -234,7 +234,7 @@ export default function SetPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-12">
+    <main className="max-w-7xl mx-auto px-6 py-12">
 
       <h1 className="text-3xl font-bold mb-8">{setName}</h1>
 
@@ -259,6 +259,6 @@ export default function SetPage() {
           Next
         </button>
       </div>
-    </div>
+    </main>
   );
 }

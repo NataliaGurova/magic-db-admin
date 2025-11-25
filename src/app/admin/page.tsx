@@ -125,9 +125,9 @@ export default function AdminPage() {
   }, [name]);
 
   return (
-    <main className="min-h-screen bg-gray-100 px-6 py-10">
+    <main className="min-h-screen bg-gray-100 px-6 py-6">
       
-      <div className="max-w-6xl mx-auto px-6 mb-6">
+      <div className="max-w-6xl mx-auto px-6">
         <div className="flex items-center gap-4">
         <h1 className="text-2xl font-bold mb-6">
           Add new entry, Edit details
