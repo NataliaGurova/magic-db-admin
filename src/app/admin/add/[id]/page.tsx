@@ -108,7 +108,7 @@ export default function AddCardPage() {
         setCard(formFromScry);
         setIsEditing(false);
       } catch (error) {
-        console.error("Ошибка загрузки карты:", error);
+        console.error("Error loading card:", error);
       } finally {
         setLoading(false);
       }
@@ -121,8 +121,8 @@ export default function AddCardPage() {
 
   if (loading || !card) {
     return (
-      <div className="p-10 text-center text-gray-600">
-        Загрузка данных карты...
+      <div className="p-10 text-center text-gray-600">       
+        Loading card data...
       </div>
     );
   }
@@ -141,7 +141,7 @@ export default function AddCardPage() {
 
       if (res.status === 409 && data.card) {
         // дубликат — карта уже есть в базе
-        alert("⚠️ Такая карта уже есть в базе. Подгружаю её данные.");
+        alert("⚠️ Card already exists in DB. Loading its data.");
         const dbCard = data.card as DbCard;
 
         const formCard: CardForm = {
@@ -173,15 +173,15 @@ export default function AddCardPage() {
       }
 
       if (!res.ok) {
-        alert(`❌ Ошибка: ${data.message ?? data.error ?? "Неизвестно"}`);
+        alert(`❌ Error: ${data.message ?? data.error ?? "Unknown"}`);
         return;
       }
 
-      alert("✅ Карта добавлена");
+      alert("✅ Card added");
       router.push("/admin");
     } catch (error) {
-      console.error("Ошибка при добавлении:", error);
-      alert("❌ Ошибка при добавлении карты");
+      console.error("Error adding card:", error);
+      alert(`❌ Error adding card: ${(error as Error).message}`);
     } finally {
       setSaving(false);
     }
@@ -205,15 +205,15 @@ export default function AddCardPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        alert(`❌ Ошибка: ${data.message ?? data.error ?? "Неизвестно"}`);
+        alert(`❌ Error: ${data.message ?? data.error ?? "Unknown"}`);
         return;
       }
 
-      alert("✅ Цена и количество обновлены");
+      alert("✅ Price and quantity updated");
       router.push("/admin");
     } catch (error) {
-      console.error("Ошибка при обновлении:", error);
-      alert("❌ Ошибка при обновлении карты");
+      console.error("Error updating card:", error);
+      alert("❌ Error updating card: " + (error as Error).message);
     } finally {
       setSaving(false);
     }
@@ -231,7 +231,7 @@ export default function AddCardPage() {
   return (
     <main className="min-h-screen bg-gray-100 flex flex-col items-center p-6">
       <h1 className="text-2xl font-semibold mb-6">
-        {isEditing ? "Редактирование карты" : "Добавить карту в базу"}
+        {isEditing ? "Edit Card" : "Add Card to DB"}
       </h1>
 
       <div className="bg-white shadow-lg rounded-xl p-6 w-full max-w-2xl space-y-6">
@@ -251,14 +251,14 @@ export default function AddCardPage() {
 
         {/* Основные данные (только чтение) */}
         <div className="space-y-2 text-sm">
-          <p><strong>Название:</strong> {card.name}</p>
-          <p><strong>Сет:</strong> {card.set_name}</p>
-          <p><strong>Редкость:</strong> {card.rarity}</p>
-          <p><strong>Тип:</strong> {card.type_line}</p>
-          <p><strong>Цвета:</strong>{" "}
+          <p><strong>Name:</strong> {card.name}</p>
+          <p><strong>Set:</strong> {card.set_name}</p>
+          <p><strong>Rarity:</strong> {card.rarity}</p>
+          <p><strong>Type:</strong> {card.type_line}</p>
+          <p><strong>Color:</strong>{" "}
             {card.colors.length > 0 ? card.colors.join(", ") : "—"}
           </p>
-          <p><strong>Оформление:</strong> {card.variant}</p>
+          <p><strong>Print:</strong> {card.variant}</p>
         </div>
 
         {/* Foil (при редактировании — только просмотр) */}
@@ -298,7 +298,7 @@ export default function AddCardPage() {
         {/* Состояние (при редактировании тоже нельзя менять) */}
         <div>
           <label className="block mb-1 text-sm font-medium">
-            Состояние карты
+            Condition
           </label>
           <Select
             disabled={isEditing}
@@ -320,7 +320,7 @@ export default function AddCardPage() {
 
         {/* Цена */}
         <div>
-          <label className="block mb-1 text-sm font-medium">Цена</label>
+          <label className="block mb-1 text-sm font-medium">Price</label>
           <Input
             type="number"
             min="0"
@@ -333,7 +333,7 @@ export default function AddCardPage() {
 
         {/* Количество */}
         <div>
-          <label className="block mb-1 text-sm font-medium">Количество</label>
+          <label className="block mb-1 text-sm font-medium">Quantity</label>
           <Input
             type="number"
             min="0"
@@ -346,7 +346,7 @@ export default function AddCardPage() {
 
         {/* Язык (при редактировании — нельзя менять) */}
         <div>
-          <label className="block mb-1 text-sm font-medium">Язык</label>
+          <label className="block mb-1 text-sm font-medium">Lang</label>
           <Select
             disabled={isEditing}
             value={card.lang}
@@ -368,7 +368,7 @@ export default function AddCardPage() {
         {/* Кнопки */}
         <div className="flex justify-between mt-6">
           <Button variant="outline" onClick={() => router.back()}>
-            Назад
+            Back
           </Button>
           <Button
             className="bg-black text-white hover:bg-gray-800"
@@ -376,10 +376,10 @@ export default function AddCardPage() {
             onClick={handleSaveClick}
           >
             {saving
-              ? "Сохраняю..."
+              ? "Saving..."
               : isEditing
-              ? "💾 Обновить цену и количество"
-              : "💾 Сохранить"}
+              ? "💾 Update Price & Quantity"
+              : "💾 Save"}
           </Button>
         </div>
       </div>

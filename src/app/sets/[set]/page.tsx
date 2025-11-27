@@ -234,9 +234,9 @@ export default function SetPage() {
   }
 
   return (
-    <main className="max-w-7xl mx-auto px-6 py-12">
+    <main className="max-w-7xl mx-auto px-6 py-6">
 
-      <h1 className="text-3xl font-bold mb-8">{setName}</h1>
+      <h1 className="text-2xl font-bold mb-6">{setName}</h1>
 
       {/* 🔥 Полностью заменяем вывод карт */}
       <RightColumnCards dbCards={data.cards} />

@@ -19,7 +19,7 @@ function toTitleCase(str: string) {
 export default function AutocompleteInput({
   value,
   onChange,
-  placeholder = "Введите название…",
+  placeholder = "Enter the name…",
 }: AutocompleteInputProps) {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -99,13 +99,13 @@ export default function AutocompleteInput({
       {/* STATUS TEXT */}
       {isLoading && (
         <p className="text-sm text-gray-500 mt-1">
-          Загружаю варианты с Scryfall…
+          Loading from Scryfall…
         </p>
       )}
 
       {!isLoading && suggestions.length === 0 && value.length > 3 && (
         <p className="text-sm text-gray-500 mt-1">
-          Ничего не найдено.
+          Nothing found
         </p>
       )}
     </div>

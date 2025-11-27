@@ -67,7 +67,7 @@ export default function VariantsList({ variants }: { variants: VariantItem[] }) 
               }
               className="mt-3 w-full bg-black text-white hover:bg-gray-800"
             >
-              Добавить в базу
+              Add to DB
             </Button>
           </div>
         ))}

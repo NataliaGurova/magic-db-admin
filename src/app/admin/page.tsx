@@ -102,12 +102,12 @@ export default function AdminPage() {
 
         setMessage(
           prints.length === 0
-            ? "Не удалось найти карты"
-            : `Найдено ${prints.length} печатей в ${sets.length} сет(ах)`
+            ? "No cards found"
+            : `Found ${prints.length} prints in ${sets.length} sets.`
         );
       } catch (error) {
         if (!axios.isCancel(error)) {
-          setMessage("Ошибка загрузки данных с Scryfall");
+          setMessage("Error loading data from Scryfall");
           setAllPrints([]);
           setSets([]);
           setSelectedCard(null);
@@ -143,7 +143,7 @@ export default function AdminPage() {
           <AutocompleteInput
             value={name}
             onChange={setName}
-            placeholder="Введите название карты…"
+            placeholder="Enter the name of the card…"
           />
 
           <SelectSetHeader
@@ -151,7 +151,7 @@ export default function AdminPage() {
             onReset={() => {
               setSelectedCard(null);
               setSetVariants([]);
-              setMessage("Выберите другой сет для этой карты");
+              setMessage("Select another set from the list.");
             }}
           />
 

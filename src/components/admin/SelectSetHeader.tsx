@@ -22,7 +22,7 @@ export default function SelectSetHeader({ selectedCard, onReset }: SelectSetHead
         onClick={onReset}
         className="text-sm text-blue-600 hover:text-blue-800 underline"
       >
-        Изменить сет
+        Change Set
       </button>
     </div>
   );

@@ -12,12 +12,12 @@ export default function RightColumnCards({ dbCards }: { dbCards: CardFromDB[] })
   return (
     <div>
       <h2 className="text-xl font-semibold mb-3">
-        В базе: {dbCards.length}
+        In DB: {dbCards.length}
       </h2>
 
       {dbCards.length === 0 && (
         <div className="text-gray-500">
-          Карт с таким названием пока нет
+          No cards with this name yet
         </div>
       )}
 
@@ -51,7 +51,7 @@ export default function RightColumnCards({ dbCards }: { dbCards: CardFromDB[] })
                 ) : (
                   <div className="w-full h-[176px] flex items-center justify-center
                     bg-gray-100 text-xs text-gray-500 rounded border">
-                    Нет изображения
+                    No Image
                   </div>
                 )}
               </div>
@@ -69,22 +69,22 @@ export default function RightColumnCards({ dbCards }: { dbCards: CardFromDB[] })
                 </div>
 
                 <div>
-                  Состояние:{" "}
+                  Condition:{" "}
                   <span className="font-medium text-black">{card.condition}</span>
                 </div>
 
                 <div>
-                  Язык:{" "}
+                  Lang:{" "}
                   <span className="font-medium text-black">{card.lang}</span>
                 </div>
 
                 <div>
-                  Цена:{" "}
+                  Price:{" "}
                   <span className="font-medium text-black">{card.prices}</span>
                 </div>
 
                 <div>
-                  Кол-во:{" "}
+                  Quantity:{" "}
                   <span className="font-medium text-black">{card.quantity}</span>
                 </div>
               </div>
@@ -96,7 +96,7 @@ export default function RightColumnCards({ dbCards }: { dbCards: CardFromDB[] })
               }
               className="mt-3 w-full bg-blue-600 text-white hover:bg-blue-700 text-sm"
             >
-              Редактировать
+              Edit
             </Button>
           </div>
         ))}
