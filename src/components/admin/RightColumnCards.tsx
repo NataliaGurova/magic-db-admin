@@ -1,10 +1,11 @@
 
-"use client";
+// "use client";
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { CardFromDB } from "@/types/cards";
+import { getSmallImageUrl } from "@/lib/helpers/image";
 
 export default function RightColumnCards({ dbCards }: { dbCards: CardFromDB[] }) {
   const router = useRouter();
@@ -42,7 +43,8 @@ export default function RightColumnCards({ dbCards }: { dbCards: CardFromDB[] })
               <div className="w-20 min-w-20">
                 {card.faces?.[0]?.imageUrl ? (
                   <Image
-                    src={card.faces[0].imageUrl}
+                    // src={card.faces[0].imageUrl}
+                    src={getSmallImageUrl(card.faces[0].imageUrl ?? "")}
                     alt={card.name}
                     width={128}
                     height={176}

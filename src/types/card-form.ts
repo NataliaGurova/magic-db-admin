@@ -1,5 +1,4 @@
 
-
 export type FoilType =
   | "nonfoil"
   | "foil"

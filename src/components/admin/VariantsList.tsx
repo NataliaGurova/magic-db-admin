@@ -1,10 +1,11 @@
 
-"use client";
+// "use client";
 
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { VariantItem } from "@/types/cards";
+import { getSmallImageUrl } from "@/lib/helpers/image";
 
 
 
@@ -42,7 +43,8 @@ export default function VariantsList({ variants }: { variants: VariantItem[] }) 
     face.imageUrl ? (
       <Image
         key={i}
-        src={face.imageUrl}
+        // src={face.imageUrl}
+        src={getSmallImageUrl(face.imageUrl ?? "")}
         alt={`${variant.name}-face-${i}`}
         width={128}
         height={176}

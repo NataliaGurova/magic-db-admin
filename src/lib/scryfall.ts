@@ -96,136 +96,91 @@ export function detectVariant(card: ScryfallCard): CardVariant {
 /* -------------------------------------------------------------------------- */
 /*                             Форматирование карты                           */
 /* -------------------------------------------------------------------------- */
-
 /** --- Приведение данных карты к формату БД --- */
 export function mapToCardData(card: ScryfallCard) {
   const variant = detectVariant(card);
 
-  // Односторонние и двусторонние карты
-  // const faces =
-  //   card.card_faces && card.card_faces.length > 0
-  //     ? card.card_faces.map((face, i) => ({
-  //         side: i === 0 ? "front" : "back",
-  //         imageUrl: face.image_uris?.large ?? face.image_uris?.normal ?? "",
-  //       }))
-  //     : [
-  //         {
-  //           side: "front",
-  //           imageUrl: card.image_uris?.large ?? card.image_uris?.normal ?? "",
-  //         },
-  //     ];
+  /* ---------- Цвета (учитываем двусторонние) ---------- */
 
-// ===== UNIFIED IMAGE HANDLING =====
+  const isLand = (card.type_line ?? "").toLowerCase().includes("land");
 
-let faces: Array<{ side: string; imageUrl: string }> = [];
+  let finalColors: string[] = [];
 
-// Есть card_faces → возможно двусторонняя карта
-if (Array.isArray(card.card_faces) && card.card_faces.length > 0) {
-  // Проверяем: есть ли изображения у faces
-  const facesHaveImages = card.card_faces.some(
-    (f) => f.image_uris?.large || f.image_uris?.normal
-  );
-
-  if (facesHaveImages) {
-    // Нормальная двусторонняя карта
-    faces = card.card_faces.map((face, i) => ({
-      side: i === 0 ? "front" : "back",
-      imageUrl:
-        face.image_uris?.large ??
-        face.image_uris?.normal ??
-        "",
-    }));
+  if (Array.isArray(card.colors) && card.colors.length > 0) {
+    finalColors = card.colors;
+  } else if (isLand) {
+    finalColors = [];
+  } else if (Array.isArray(card.card_faces) && card.card_faces.length > 0) {
+    const faceColors = [
+      ...(card.card_faces[0]?.colors ?? []),
+      ...(card.card_faces[1]?.colors ?? []),
+    ];
+    const unique = [...new Set(faceColors)];
+    finalColors = unique.length > 0 ? unique : ["Colorless"];
   } else {
-    // Кривые split/adventure карты без image_uris в faces
-    // → считаем односторонней
+    finalColors = ["Colorless"];
+  }
+
+  /* ---------- Выбор нужного URL (только normal/small) ---------- */
+
+  // const pickImageUrl = (
+  //   face?: ScryfallCardFace,
+  //   fallbackCard?: ScryfallCard
+  // ): string => {
+  //   if (face?.image_uris) {
+  //     return face.image_uris.normal ?? face.image_uris.small ?? "";
+  //   }
+  //   if (fallbackCard?.image_uris) {
+  //     return fallbackCard.image_uris.normal ?? fallbackCard.image_uris.small ?? "";
+  //   }
+  //   return "";
+  // };
+
+  const pickImageUrl = (face?: ScryfallCardFace, card?: ScryfallCard): string => {
+    return (
+      face?.image_uris?.normal ||
+      face?.image_uris?.small ||
+      card?.image_uris?.normal ||
+      card?.image_uris?.small ||
+      ""
+    );
+  };
+
+  /* ---------- Формируем faces для БД ---------- */
+
+  let faces: Array<{ side: string; imageUrl: string }> = [];
+
+  if (Array.isArray(card.card_faces) && card.card_faces.length > 0) {
+    const facesHaveImages = card.card_faces.some(
+      (f) => f.image_uris?.normal || f.image_uris?.small
+    );
+
+    if (facesHaveImages) {
+      // двусторонняя карта с нормальными image_uris
+      faces = card.card_faces.map((face, index) => ({
+        side: index === 0 ? "front" : "back",
+        imageUrl: pickImageUrl(face, card), // ⬅️ normal / small
+      }));
+    } else {
+      // кривые split/adventure → считаем односторонними
+      faces = [
+        {
+          side: "front",
+          imageUrl: pickImageUrl(undefined, card),
+        },
+      ];
+    }
+  } else {
+    // точно односторонняя карта
     faces = [
       {
         side: "front",
-        imageUrl:
-          card.image_uris?.large ??
-          card.image_uris?.normal ??
-          "",
+        imageUrl: pickImageUrl(undefined, card),
       },
     ];
   }
-} else {
-  // Точно односторонняя карта
-  faces = [
-    {
-      side: "front",
-      imageUrl:
-        card.image_uris?.large ??
-        card.image_uris?.normal ??
-        "",
-    },
-  ];
-}
 
-  
-  // 🧩 Логика для цвета:
-  // если нет цветов и карта не земля → ["colorless"]
-  // если земля → []
-  // const isLand = (card.type_line ?? "").toLowerCase().includes("land");
-  // let finalColors: string[] = [];
-
-  // if (card.colors && card.colors.length > 0) {
-  //   finalColors = card.colors;
-  // } else if (isLand) {
-  //   finalColors = [];
-  // } else {
-  //   finalColors = ["Colorless"];
-  // }
-
-
-  // ===== COLOR HANDLING =====
-
-// Определяем, является ли карта землей
-const isLand = (card.type_line ?? "").toLowerCase().includes("land");
-
-let finalColors: string[] = [];
-
-// 1. Если есть цвета на верхнем уровне — берем их
-if (Array.isArray(card.colors) && card.colors.length > 0) {
-  finalColors = card.colors;
-}
-
-// 2. Если это земля — всегда []
-else if (isLand) {
-  finalColors = [];
-}
-
-// 3. Если есть card_faces и в них есть цвета
-else if (
-  Array.isArray(card.card_faces) &&
-  card.card_faces.length > 0
-) {
-  const faceColors = [
-    ...(card.card_faces[0]?.colors ?? []),
-    ...(card.card_faces[1]?.colors ?? []),
-  ];
-
-  // фильтруем дубли
-  const unique = [...new Set(faceColors)];
-
-//   if (unique.length > 0) {
-//     finalColors = unique;
-//   } else {
-//     finalColors = ["Colorless"];
-//   }
-// }
-
-// // 4. Во всех остальных случаях — Colorless
-// else {
-//   finalColors = ["Colorless"];
-// }
-
-
-finalColors = unique.length > 0 ? unique : ["Colorless"];
-} else {
-  finalColors = ["Colorless"];
-}
-  
-
+  /* ---------- Возврат объекта для БД / формы ---------- */
 
   return {
     scryfall_id: card.id,
@@ -235,7 +190,6 @@ finalColors = unique.length > 0 ? unique : ["Colorless"];
     rarity: card.rarity ?? "",
     artist: card.artist ?? "",
     type_line: card.type_line ?? "",
-    // colors: card.colors ?? [],
     colors: finalColors,
     legalities: card.legalities ?? {},
     faces,
@@ -247,9 +201,180 @@ finalColors = unique.length > 0 ? unique : ["Colorless"];
     lang: card.lang ?? "en",
     isFoil: false,
     condition: "NM",
-
   };
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// /** --- Приведение данных карты к формату БД --- */
+// export function mapToCardData(card: ScryfallCard) {
+//   const variant = detectVariant(card);
+
+//   // Односторонние и двусторонние карты
+//   // const faces =
+//   //   card.card_faces && card.card_faces.length > 0
+//   //     ? card.card_faces.map((face, i) => ({
+//   //         side: i === 0 ? "front" : "back",
+//   //         imageUrl: face.image_uris?.large ?? face.image_uris?.normal ?? "",
+//   //       }))
+//   //     : [
+//   //         {
+//   //           side: "front",
+//   //           imageUrl: card.image_uris?.large ?? card.image_uris?.normal ?? "",
+//   //         },
+//   //     ];
+
+// // ===== UNIFIED IMAGE HANDLING =====
+
+// let faces: Array<{ side: string; imageUrl: string }> = [];
+
+// // Есть card_faces → возможно двусторонняя карта
+// if (Array.isArray(card.card_faces) && card.card_faces.length > 0) {
+//   // Проверяем: есть ли изображения у faces
+//   const facesHaveImages = card.card_faces.some(
+//     (f) => f.image_uris?.large || f.image_uris?.normal
+//     // (f) => f.image_uris?.normal || f.image_uris?.large
+//   );
+
+//   if (facesHaveImages) {
+//     // Нормальная двусторонняя карта
+//     faces = card.card_faces.map((face, i) => ({
+//       side: i === 0 ? "front" : "back",
+//       imageUrl:
+//       face.image_uris?.normal ??
+//       face.image_uris?.large ??
+//         "",
+//     }));
+//   } else {
+//     // Кривые split/adventure карты без image_uris в faces
+//     // → считаем односторонней
+//     faces = [
+//       {
+//         side: "front",
+//         imageUrl:
+//         card.image_uris?.normal ??
+//         card.image_uris?.large ??
+//           "",
+//       },
+//     ];
+//   }
+// } else {
+//   // Точно односторонняя карта
+//   faces = [
+//     {
+//       side: "front",
+//       imageUrl:
+//       card.image_uris?.normal ??
+//       card.image_uris?.large ??
+//         "",
+//     },
+//   ];
+// }
+
+  
+//   // 🧩 Логика для цвета:
+//   // если нет цветов и карта не земля → ["colorless"]
+//   // если земля → []
+//   // const isLand = (card.type_line ?? "").toLowerCase().includes("land");
+//   // let finalColors: string[] = [];
+
+//   // if (card.colors && card.colors.length > 0) {
+//   //   finalColors = card.colors;
+//   // } else if (isLand) {
+//   //   finalColors = [];
+//   // } else {
+//   //   finalColors = ["Colorless"];
+//   // }
+
+
+//   // ===== COLOR HANDLING =====
+
+// // Определяем, является ли карта землей
+//   {*----*} const isLand = (card.type_line ?? "").toLowerCase().includes("land");
+
+//   {*----*}let finalColors: string[] = [];
+
+// // 1. Если есть цвета на верхнем уровне — берем их
+// if (Array.isArray(card.colors) && card.colors.length > 0) {
+//   finalColors = card.colors;
+// }
+
+// // 2. Если это земля — всегда []
+// else if (isLand) {
+//   finalColors = [];
+// }
+
+// // 3. Если есть card_faces и в них есть цвета
+// else if (
+//   Array.isArray(card.card_faces) &&
+//   card.card_faces.length > 0
+// ) {
+//   const faceColors = [
+//     ...(card.card_faces[0]?.colors ?? []),
+//     ...(card.card_faces[1]?.colors ?? []),
+//   ];
+
+//   // фильтруем дубли
+//   const unique = [...new Set(faceColors)];
+
+// //   if (unique.length > 0) {
+// //     finalColors = unique;
+// //   } else {
+// //     finalColors = ["Colorless"];
+// //   }
+// // }
+
+// // // 4. Во всех остальных случаях — Colorless
+// // else {
+// //   finalColors = ["Colorless"];
+// // }
+
+
+// finalColors = unique.length > 0 ? unique : ["Colorless"];
+// } else {
+//   finalColors = ["Colorless"];
+// }
+  
+
+
+//   return {
+//     scryfall_id: card.id,
+//     name: card.name,
+//     set: card.set,
+//     set_name: card.set_name,
+//     rarity: card.rarity ?? "",
+//     artist: card.artist ?? "",
+//     type_line: card.type_line ?? "",
+//     // colors: card.colors ?? [],
+//     colors: finalColors,
+//     legalities: card.legalities ?? {},
+//     faces,
+//     variant,
+//     foilType: "nonfoil" as "nonfoil" | "foil" | "etched" | "surgefoil" | "rainbowfoil",
+//     prices: "",
+//     collector_number: card.collector_number ?? "",
+//     quantity: "",
+//     lang: card.lang ?? "en",
+//     isFoil: false,
+//     condition: "NM",
+
+//   };
+// }
 
 /* -------------------------------------------------------------------------- */
 /*                            Загрузка принтов карты                          */
