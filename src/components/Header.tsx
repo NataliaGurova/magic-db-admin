@@ -69,9 +69,9 @@ export default function Header() {
         <Link href="/" className="flex items-center gap-3">
           <Image
             src="/citadel.jpg"
-            alt="Magic DB Logo"
-            width={40}
-            height={40}
+            alt="Citadel"
+            width={48}
+            height={48}
             className="rounded-md"
             priority
           />
