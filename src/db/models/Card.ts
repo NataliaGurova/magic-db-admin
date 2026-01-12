@@ -124,7 +124,11 @@ const CardSchema = new Schema(
   {
     scryfall_id: { type: String, required: true, unique: true },
     name: String,
-    set: String,
+    set: {
+      type: String,
+      uppercase: true,
+      trim: true,
+    },
     set_name: String,
     rarity: String,
     artist: String,
